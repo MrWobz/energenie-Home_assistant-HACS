@@ -3,5 +3,8 @@
   "hacs": "1.6.0",
   "domains": ["light", "switch"],
   "iot_class": "Local Push",
-  "homeassistant": "2023.1.0"
+  "homeassistant": "2023.1.0",
+  "render_readme": true,
+  "country": ["GB", "US", "EU"],
+  "content_in_root": false
 }

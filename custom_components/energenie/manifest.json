@@ -2,10 +2,10 @@
   "domain": "energenie",
   "name": "Energenie ENER314-RT",
   "version": "1.0.0",
-  "documentation": "https://github.com/energenie-ener314rt",
-  "issue_tracker": "https://github.com/energenie-ener314rt/issues",
+  "documentation": "https://github.com/MrWobz/energenie-Home_assistant-HACS",
+  "issue_tracker": "https://github.com/MrWobz/energenie-Home_assistant-HACS/issues",
   "requirements": ["gpiozero>=1.6.2"],
-  "codeowners": ["@energenie"],
+  "codeowners": ["@MrWobz"],
   "config_flow": true,
   "dependencies": [],
   "iot_class": "local_push"
