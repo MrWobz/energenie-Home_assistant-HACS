@@ -1,7 +1,65 @@
 turn_on_all:
-  name: Turn on all devices
-  description: Turn on all Energenie devices
+  name: Turn On All Devices
+  description: Turn on all configured Energenie devices
 
 turn_off_all:
-  name: Turn off all devices
-  description: Turn off all Energenie devices
+  name: Turn Off All Devices
+  description: Turn off all configured Energenie devices
+
+pair_device:
+  name: Pair Device
+  description: Put device into pairing mode by sending alternating on/off signals. Put your Energenie device into learn mode first!
+  fields:
+    device_id:
+      name: Device ID
+      description: The device ID to pair (1-16 for MIHO024, 1-4 for most others)
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 16
+          mode: box
+    duration:
+      name: Duration
+      description: How long to send pairing signals (seconds)
+      required: false
+      default: 10
+      selector:
+        number:
+          min: 5
+          max: 60
+          mode: box
+
+learn_mode:
+  name: Learn Mode
+  description: Send continuous on or off signals for device learning. Put your Energenie device into learn mode first!
+  fields:
+    device_id:
+      name: Device ID
+      description: The device ID to learn (1-16 for MIHO024, 1-4 for most others)
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 16
+          mode: box
+    command:
+      name: Command
+      description: Which command to teach (on or off)
+      required: true
+      default: "on"
+      selector:
+        select:
+          options:
+            - "on"
+            - "off"
+    duration:
+      name: Duration
+      description: How long to send learning signals (seconds)
+      required: false
+      default: 20
+      selector:
+        number:
+          min: 10
+          max: 120
+          mode: box

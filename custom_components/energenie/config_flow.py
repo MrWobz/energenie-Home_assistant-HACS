@@ -16,9 +16,16 @@ from .const import (
     CONF_DEVICE_3_TYPE,
     CONF_DEVICE_4_NAME,
     CONF_DEVICE_4_TYPE,
+    CONF_MOTION_SENSOR_ENABLED,
+    CONF_MOTION_SENSOR_NAME,
+    CONF_MOTION_SENSOR_ID,
     DEVICE_TYPES,
     DEVICE_TYPE_LIGHT,
+    DEVICE_TYPE_DESCRIPTIONS,
+    COMPATIBLE_DEVICES,
     DEFAULT_DEVICE_NAMES,
+    DEFAULT_MOTION_SENSOR_NAME,
+    DEFAULT_MOTION_SENSOR_ID,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -39,29 +46,29 @@ class EnergenieConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 await self.async_set_unique_id("energenie_ener314rt")
                 self._abort_if_unique_id_configured()
                 
-                # Test GPIO availability if gpiozero is available
+                # Test pyenergenie availability
                 try:
-                    _LOGGER.info("Testing GPIO and Energenie module availability...")
-                    from gpiozero import Device, Energenie
+                    _LOGGER.info("Testing pyenergenie library availability...")
+                    import energenie
                     
-                    # Test if we can create an Energenie device (don't actually use it)
+                    # Test initialization
                     try:
-                        test_device = Energenie(1)
-                        _LOGGER.info("Energenie device creation test successful")
-                        # Clean up the test device
-                        test_device.close()
-                    except Exception as device_error:
-                        _LOGGER.warning("Energenie device test failed: %s", device_error)
+                        energenie.init()
+                        _LOGGER.info("pyenergenie initialization successful")
+                        # Clean up
+                        energenie.finished()
+                    except Exception as init_error:
+                        _LOGGER.warning("pyenergenie initialization test failed: %s", init_error)
                         # This might be normal if hardware isn't connected
                         
-                    _LOGGER.info("GPIO and Energenie tests completed successfully")
+                    _LOGGER.info("pyenergenie tests completed successfully")
                     
                 except ImportError as e:
-                    _LOGGER.error("gpiozero or Energenie module not available: %s", e)
-                    errors["base"] = "gpio_not_available"
+                    _LOGGER.error("pyenergenie library not available: %s", e)
+                    errors["base"] = "pyenergenie_not_available"
                 except Exception as e:
-                    _LOGGER.warning("GPIO/Energenie test failed: %s", e)
-                    errors["base"] = "gpio_test_failed"
+                    _LOGGER.warning("pyenergenie test failed: %s", e)
+                    errors["base"] = "pyenergenie_test_failed"
                 
                 if not errors:
                     return self.async_create_entry(
@@ -73,32 +80,53 @@ class EnergenieConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Unexpected error during setup: %s", e)
                 errors["base"] = "unknown"
 
-        # Define the configuration schema - only ask which devices to enable
-        data_schema = vol.Schema({
-            vol.Optional("device_1_enabled", default=True): bool,
-            vol.Optional(CONF_DEVICE_1_NAME, default=DEFAULT_DEVICE_NAMES[1]): str,
-            vol.Optional(CONF_DEVICE_1_TYPE, default=DEVICE_TYPE_LIGHT): vol.In(DEVICE_TYPES),
-            vol.Optional("device_2_enabled", default=False): bool,
-            vol.Optional(CONF_DEVICE_2_NAME, default=DEFAULT_DEVICE_NAMES[2]): str,
-            vol.Optional(CONF_DEVICE_2_TYPE, default=DEVICE_TYPE_LIGHT): vol.In(DEVICE_TYPES),
-            vol.Optional("device_3_enabled", default=False): bool,
-            vol.Optional(CONF_DEVICE_3_NAME, default=DEFAULT_DEVICE_NAMES[3]): str,
-            vol.Optional(CONF_DEVICE_3_TYPE, default=DEVICE_TYPE_LIGHT): vol.In(DEVICE_TYPES),
-            vol.Optional("device_4_enabled", default=False): bool,
-            vol.Optional(CONF_DEVICE_4_NAME, default=DEFAULT_DEVICE_NAMES[4]): str,
-            vol.Optional(CONF_DEVICE_4_TYPE, default=DEVICE_TYPE_LIGHT): vol.In(DEVICE_TYPES),
-        })
+        # Define the configuration schema - dynamic device configuration
+        data_schema_fields = {}
+        
+        # Add option for number of devices to configure
+        data_schema_fields[vol.Optional("num_devices", default=4)] = vol.In([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])
+        
+        # Always show first 4 devices for compatibility
+        for i in range(1, 5):
+            data_schema_fields[vol.Optional(f"device_{i}_enabled", default=(i == 1))] = bool
+            data_schema_fields[vol.Optional(f"device_{i}_name", default=DEFAULT_DEVICE_NAMES[i])] = str
+            data_schema_fields[vol.Optional(f"device_{i}_type", default=DEVICE_TYPE_LIGHT)] = vol.In(DEVICE_TYPES)
+        
+        # Motion sensor configuration
+        data_schema_fields[vol.Optional(CONF_MOTION_SENSOR_ENABLED, default=False)] = bool
+        data_schema_fields[vol.Optional(CONF_MOTION_SENSOR_NAME, default=DEFAULT_MOTION_SENSOR_NAME)] = str
+        data_schema_fields[vol.Optional(CONF_MOTION_SENSOR_ID, default=DEFAULT_MOTION_SENSOR_ID)] = str
+        
+        data_schema = vol.Schema(data_schema_fields)
 
         return self.async_show_form(
             step_id="user",
             data_schema=data_schema,
             errors=errors,
             description_placeholders={
-                "gpio_not_available": "GPIO library (gpiozero) or Energenie module is not available. Make sure you're running on a Raspberry Pi with GPIO support and the ENER314-RT drivers installed.",
-                "gpio_test_failed": "GPIO or Energenie hardware test failed. Check that your Raspberry Pi GPIO is working and the ENER314-RT board is properly connected.",
-                "unknown": "An unexpected error occurred during setup. Check the logs for more details."
+                "pyenergenie_not_available": "pyenergenie library is not available. Install it with: pip install pyenergenie",
+                "pyenergenie_test_failed": "pyenergenie library test failed. Check that your ENER314-RT board is properly connected and you have the correct permissions.",
+                "unknown": "An unexpected error occurred during setup. Check the logs for more details.",
+                "compatible_devices": self._get_compatible_devices_info()
             }
         )
+
+    def _get_compatible_devices_info(self):
+        """Generate device compatibility information for the UI."""
+        info_lines = ["Compatible Energenie devices:"]
+        
+        for category, details in COMPATIBLE_DEVICES.items():
+            models = ", ".join(details["models"])
+            info_lines.append(f"• {details['description']}: {models}")
+            if details["max_devices"] > 1:
+                info_lines.append(f"  (Supports up to {details['max_devices']} devices)")
+        
+        info_lines.append("")
+        info_lines.append("Device Types:")
+        for dev_type, description in DEVICE_TYPE_DESCRIPTIONS.items():
+            info_lines.append(f"• {description}")
+            
+        return "\n".join(info_lines)
 
     @staticmethod
     @callback

@@ -32,18 +32,19 @@ async def async_setup_entry(
     """Set up Energenie switches from a config entry."""
     switches = []
     
-    # Only create switches for enabled devices of switch type
-    if config_entry.data.get("device_1_enabled", True) and config_entry.data.get(CONF_DEVICE_1_TYPE) == DEVICE_TYPE_SWITCH:
-        switches.append(EnergenieSwitch(1, config_entry.data.get(CONF_DEVICE_1_NAME), config_entry.entry_id))
+    # Get number of devices to check (default to 16 for full range)
+    num_devices = config_entry.data.get("num_devices", 16)
     
-    if config_entry.data.get("device_2_enabled", False) and config_entry.data.get(CONF_DEVICE_2_TYPE) == DEVICE_TYPE_SWITCH:
-        switches.append(EnergenieSwitch(2, config_entry.data.get(CONF_DEVICE_2_NAME), config_entry.entry_id))
-    
-    if config_entry.data.get("device_3_enabled", False) and config_entry.data.get(CONF_DEVICE_3_TYPE) == DEVICE_TYPE_SWITCH:
-        switches.append(EnergenieSwitch(3, config_entry.data.get(CONF_DEVICE_3_NAME), config_entry.entry_id))
-    
-    if config_entry.data.get("device_4_enabled", False) and config_entry.data.get(CONF_DEVICE_4_TYPE) == DEVICE_TYPE_SWITCH:
-        switches.append(EnergenieSwitch(4, config_entry.data.get(CONF_DEVICE_4_NAME), config_entry.entry_id))
+    # Check all possible device slots up to the configured number
+    for i in range(1, num_devices + 1):
+        device_enabled_key = f"device_{i}_enabled"
+        device_type_key = f"device_{i}_type" 
+        device_name_key = f"device_{i}_name"
+        
+        # Only create switches for enabled devices of switch type
+        if config_entry.data.get(device_enabled_key, False) and config_entry.data.get(device_type_key) == DEVICE_TYPE_SWITCH:
+            device_name = config_entry.data.get(device_name_key, f"Energenie Device {i}")
+            switches.append(EnergenieSwitch(i, device_name, config_entry.entry_id))
 
     if switches:
         async_add_entities(switches, True)
@@ -92,9 +93,10 @@ class EnergenieSwitch(SwitchEntity):
     async def async_turn_on(self, **kwargs) -> None:
         """Turn the switch on."""
         try:
-            from gpiozero import Energenie
-            device = Energenie(self._device_num)
-            device.on()
+            import energenie
+            energenie.init()
+            energenie.switch_on(self._device_num)
+            energenie.finished()
             self._is_on = True
             self.async_write_ha_state()
             _LOGGER.info("Turned on %s (device %d)", self._name, self._device_num)
@@ -104,9 +106,10 @@ class EnergenieSwitch(SwitchEntity):
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the switch off."""
         try:
-            from gpiozero import Energenie
-            device = Energenie(self._device_num)
-            device.off()
+            import energenie
+            energenie.init()
+            energenie.switch_off(self._device_num)
+            energenie.finished()
             self._is_on = False
             self.async_write_ha_state()
             _LOGGER.info("Turned off %s (device %d)", self._name, self._device_num)

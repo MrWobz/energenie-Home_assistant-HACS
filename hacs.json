@@ -1,7 +1,7 @@
 {
   "name": "Energenie ENER314-RT",
   "hacs": "1.6.0",
-  "domains": ["light", "switch"],
+  "domains": ["light", "switch", "binary_sensor"],
   "iot_class": "local_push",
   "homeassistant": "2023.1.0",
   "render_readme": true,
