@@ -1,0 +1,7 @@
+turn_on_all:
+  name: Turn on all devices
+  description: Turn on all Energenie devices
+
+turn_off_all:
+  name: Turn off all devices
+  description: Turn off all Energenie devices
