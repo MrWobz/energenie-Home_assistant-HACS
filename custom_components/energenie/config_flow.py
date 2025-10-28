@@ -46,66 +46,76 @@ class EnergenieConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 await self.async_set_unique_id("energenie_ener314rt")
                 self._abort_if_unique_id_configured()
                 
-                # Test pyenergenie availability
+                # Process the setup data
+                setup_data = {}
+                
+                # If user wants to set up first device
+                if user_input.get("setup_device_now", True):
+                    setup_data["device_1_enabled"] = True
+                    setup_data[CONF_DEVICE_1_NAME] = user_input.get(CONF_DEVICE_1_NAME, DEFAULT_DEVICE_NAMES[1])
+                    setup_data[CONF_DEVICE_1_TYPE] = user_input.get(CONF_DEVICE_1_TYPE, DEVICE_TYPE_LIGHT)
+                
+                # Motion sensor setup
+                if user_input.get(CONF_MOTION_SENSOR_ENABLED, False):
+                    setup_data[CONF_MOTION_SENSOR_ENABLED] = True
+                    setup_data[CONF_MOTION_SENSOR_NAME] = user_input.get(CONF_MOTION_SENSOR_NAME, DEFAULT_MOTION_SENSOR_NAME)
+                    setup_data[CONF_MOTION_SENSOR_ID] = user_input.get(CONF_MOTION_SENSOR_ID, DEFAULT_MOTION_SENSOR_ID)
+                
+                # Test required dependencies - but allow setup to continue
+                dependencies_missing = []
+                
+                # Test RPi.GPIO (but don't fail setup)
+                try:
+                    import RPi.GPIO
+                    _LOGGER.info("RPi.GPIO library found and imported successfully")
+                except ImportError as e:
+                    _LOGGER.warning("RPi.GPIO library not available: %s", e)
+                    dependencies_missing.append("RPi.GPIO")
+                
+                # Test pyenergenie availability (but don't fail setup)
                 try:
                     _LOGGER.info("Testing pyenergenie library availability...")
                     import energenie
-                    
-                    # Test initialization
-                    try:
-                        energenie.init()
-                        _LOGGER.info("pyenergenie initialization successful")
-                        # Clean up
-                        energenie.finished()
-                    except Exception as init_error:
-                        _LOGGER.warning("pyenergenie initialization test failed: %s", init_error)
-                        # This might be normal if hardware isn't connected
-                        
-                    _LOGGER.info("pyenergenie tests completed successfully")
+                    _LOGGER.info("pyenergenie library found and imported successfully")
                     
                 except ImportError as e:
-                    _LOGGER.error("pyenergenie library not available: %s", e)
-                    errors["base"] = "pyenergenie_not_available"
+                    _LOGGER.warning("pyenergenie library not available: %s", e)
+                    dependencies_missing.append("pyenergenie")
+                    
                 except Exception as e:
-                    _LOGGER.warning("pyenergenie test failed: %s", e)
-                    errors["base"] = "pyenergenie_test_failed"
+                    _LOGGER.warning("pyenergenie library test warning: %s", e)
+                
+                # Log missing dependencies but allow setup to continue
+                if dependencies_missing:
+                    _LOGGER.info("Missing dependencies: %s - Home Assistant will attempt to install them automatically", dependencies_missing)
+                    _LOGGER.info("If integration doesn't work after restart, check Home Assistant logs for installation errors")
                 
                 if not errors:
                     return self.async_create_entry(
                         title="Energenie ENER314-RT",
-                        data=user_input,
+                        data=setup_data,
                     )
                     
             except Exception as e:
                 _LOGGER.exception("Unexpected error during setup: %s", e)
                 errors["base"] = "unknown"
 
-        # Define the configuration schema - dynamic device configuration
-        data_schema_fields = {}
-        
-        # Add option for number of devices to configure
-        data_schema_fields[vol.Optional("num_devices", default=4)] = vol.In([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])
-        
-        # Always show first 4 devices for compatibility
-        for i in range(1, 5):
-            data_schema_fields[vol.Optional(f"device_{i}_enabled", default=(i == 1))] = bool
-            data_schema_fields[vol.Optional(f"device_{i}_name", default=DEFAULT_DEVICE_NAMES[i])] = str
-            data_schema_fields[vol.Optional(f"device_{i}_type", default=DEVICE_TYPE_LIGHT)] = vol.In(DEVICE_TYPES)
-        
-        # Motion sensor configuration
-        data_schema_fields[vol.Optional(CONF_MOTION_SENSOR_ENABLED, default=False)] = bool
-        data_schema_fields[vol.Optional(CONF_MOTION_SENSOR_NAME, default=DEFAULT_MOTION_SENSOR_NAME)] = str
-        data_schema_fields[vol.Optional(CONF_MOTION_SENSOR_ID, default=DEFAULT_MOTION_SENSOR_ID)] = str
-        
-        data_schema = vol.Schema(data_schema_fields)
+        # Simplified initial configuration - just create the integration
+        data_schema = vol.Schema({
+            vol.Optional("setup_device_now", default=True): bool,
+            vol.Optional(CONF_DEVICE_1_NAME, default=DEFAULT_DEVICE_NAMES[1]): str,
+            vol.Optional(CONF_DEVICE_1_TYPE, default=DEVICE_TYPE_LIGHT): vol.In(DEVICE_TYPES),
+            vol.Optional(CONF_MOTION_SENSOR_ENABLED, default=False): bool,
+            vol.Optional(CONF_MOTION_SENSOR_NAME, default=DEFAULT_MOTION_SENSOR_NAME): str,
+            vol.Optional(CONF_MOTION_SENSOR_ID, default=DEFAULT_MOTION_SENSOR_ID): str,
+        })
 
         return self.async_show_form(
             step_id="user",
             data_schema=data_schema,
             errors=errors,
             description_placeholders={
-                "pyenergenie_not_available": "pyenergenie library is not available. Install it with: pip install pyenergenie",
-                "pyenergenie_test_failed": "pyenergenie library test failed. Check that your ENER314-RT board is properly connected and you have the correct permissions.",
+                "setup_info": "The integration will be created now. Home Assistant will automatically install required dependencies (RPi.GPIO and pyenergenie) in the background.\n\nIf devices don't work after setup:\n1. Restart Home Assistant to complete dependency installation\n2. Check Settings → System → Logs for any installation errors\n3. The integration will show detailed error messages if dependencies are missing",
                 "unknown": "An unexpected error occurred during setup. Check the logs for more details.",
                 "compatible_devices": self._get_compatible_devices_info()
             }
@@ -145,47 +155,86 @@ class EnergenieOptionsFlow(config_entries.OptionsFlow):
     async def async_step_init(self, user_input=None):
         """Handle options flow."""
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            # Merge new options with existing data
+            new_data = {**self.config_entry.data}
+            
+            # Add new device if specified
+            if user_input.get("add_device"):
+                device_id = user_input.get("new_device_id", 2)
+                device_name = user_input.get("new_device_name", f"Energenie Device {device_id}")
+                device_type = user_input.get("new_device_type", DEVICE_TYPE_LIGHT)
+                
+                new_data[f"device_{device_id}_enabled"] = True
+                new_data[f"device_{device_id}_name"] = device_name
+                new_data[f"device_{device_id}_type"] = device_type
+            
+            # Update motion sensor if changed
+            if "motion_sensor_enabled" in user_input:
+                new_data[CONF_MOTION_SENSOR_ENABLED] = user_input["motion_sensor_enabled"]
+                if user_input["motion_sensor_enabled"]:
+                    new_data[CONF_MOTION_SENSOR_NAME] = user_input.get("motion_sensor_name", DEFAULT_MOTION_SENSOR_NAME)
+                    new_data[CONF_MOTION_SENSOR_ID] = user_input.get("motion_sensor_id", DEFAULT_MOTION_SENSOR_ID)
+            
+            # Update the config entry
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, data=new_data
+            )
+            
+            return self.async_create_entry(title="", data={})
 
         # Get current configuration
-        current_config = {**self.config_entry.data, **self.config_entry.options}
+        current_config = self.config_entry.data
+        
+        # Find next available device slot
+        next_device_id = 2
+        for i in range(2, 17):  # Check slots 2-16
+            if not current_config.get(f"device_{i}_enabled", False):
+                next_device_id = i
+                break
 
         data_schema = vol.Schema({
-            vol.Required(
-                CONF_DEVICE_1_NAME, 
-                default=current_config.get(CONF_DEVICE_1_NAME, DEFAULT_DEVICE_NAMES[1])
+            vol.Optional("add_device", default=False): bool,
+            vol.Optional("new_device_id", default=next_device_id): vol.In(list(range(1, 17))),
+            vol.Optional("new_device_name", default=f"Energenie Device {next_device_id}"): str,
+            vol.Optional("new_device_type", default=DEVICE_TYPE_LIGHT): vol.In(DEVICE_TYPES),
+            vol.Optional(
+                "motion_sensor_enabled", 
+                default=current_config.get(CONF_MOTION_SENSOR_ENABLED, False)
+            ): bool,
+            vol.Optional(
+                "motion_sensor_name", 
+                default=current_config.get(CONF_MOTION_SENSOR_NAME, DEFAULT_MOTION_SENSOR_NAME)
             ): str,
-            vol.Required(
-                CONF_DEVICE_1_TYPE, 
-                default=current_config.get(CONF_DEVICE_1_TYPE, DEVICE_TYPE_LIGHT)
-            ): vol.In(DEVICE_TYPES),
-            vol.Required(
-                CONF_DEVICE_2_NAME, 
-                default=current_config.get(CONF_DEVICE_2_NAME, DEFAULT_DEVICE_NAMES[2])
+            vol.Optional(
+                "motion_sensor_id", 
+                default=current_config.get(CONF_MOTION_SENSOR_ID, DEFAULT_MOTION_SENSOR_ID)
             ): str,
-            vol.Required(
-                CONF_DEVICE_2_TYPE, 
-                default=current_config.get(CONF_DEVICE_2_TYPE, DEVICE_TYPE_LIGHT)
-            ): vol.In(DEVICE_TYPES),
-            vol.Required(
-                CONF_DEVICE_3_NAME, 
-                default=current_config.get(CONF_DEVICE_3_NAME, DEFAULT_DEVICE_NAMES[3])
-            ): str,
-            vol.Required(
-                CONF_DEVICE_3_TYPE, 
-                default=current_config.get(CONF_DEVICE_3_TYPE, DEVICE_TYPE_LIGHT)
-            ): vol.In(DEVICE_TYPES),
-            vol.Required(
-                CONF_DEVICE_4_NAME, 
-                default=current_config.get(CONF_DEVICE_4_NAME, DEFAULT_DEVICE_NAMES[4])
-            ): str,
-            vol.Required(
-                CONF_DEVICE_4_TYPE, 
-                default=current_config.get(CONF_DEVICE_4_TYPE, DEVICE_TYPE_LIGHT)
-            ): vol.In(DEVICE_TYPES),
         })
 
         return self.async_show_form(
             step_id="init",
             data_schema=data_schema,
+            description_placeholders={
+                "current_devices": self._get_current_devices_info()
+            }
         )
+    
+    def _get_current_devices_info(self):
+        """Get info about currently configured devices."""
+        current_config = self.config_entry.data
+        devices = []
+        
+        for i in range(1, 17):
+            if current_config.get(f"device_{i}_enabled", False):
+                name = current_config.get(f"device_{i}_name", f"Device {i}")
+                device_type = current_config.get(f"device_{i}_type", "unknown")
+                devices.append(f"Device {i}: {name} ({device_type})")
+        
+        if current_config.get(CONF_MOTION_SENSOR_ENABLED, False):
+            sensor_name = current_config.get(CONF_MOTION_SENSOR_NAME, "Motion Sensor")
+            devices.append(f"Motion Sensor: {sensor_name}")
+        
+        if not devices:
+            return "No devices currently configured"
+        
+        return "Currently configured:\n" + "\n".join(devices)

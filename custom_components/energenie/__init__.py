@@ -43,20 +43,49 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN][entry.entry_id] = entry.data
         _LOGGER.debug("Configuration data stored successfully")
 
+        # Test dependencies and functionality - with user-friendly error messages
+        _LOGGER.info("Testing required dependencies...")
+        
+        # Test RPi.GPIO
+        try:
+            import RPi.GPIO
+            _LOGGER.info("RPi.GPIO library found")
+        except ImportError as e:
+            _LOGGER.error("RPi.GPIO library not available: %s", e)
+            # Create a persistent notification instead of failing
+            hass.components.persistent_notification.create(
+                message="Energenie integration requires RPi.GPIO library. Home Assistant is attempting to install it automatically. Please restart Home Assistant and try again. If the problem persists, check the logs for installation errors.",
+                title="Energenie: Missing RPi.GPIO",
+                notification_id="energenie_rpi_gpio_missing"
+            )
+            return False
+        
         # Test pyenergenie availability and functionality
-        _LOGGER.info("Testing pyenergenie availability...")
         try:
             import energenie
-            # Test basic initialization
+            # Test basic initialization to ensure library works
             energenie.init()
             _LOGGER.info("pyenergenie initialization successful")
             energenie.finished()
         except ImportError as e:
             _LOGGER.error("pyenergenie library not available: %s", e)
-            raise Exception("pyenergenie library not available. Install with: pip install pyenergenie")
+            # Create a persistent notification instead of failing
+            hass.components.persistent_notification.create(
+                message="Energenie integration requires pyenergenie library. Home Assistant is attempting to install it automatically. Please restart Home Assistant and try again. If the problem persists, check the logs for installation errors.",
+                title="Energenie: Missing pyenergenie",
+                notification_id="energenie_pyenergenie_missing"
+            )
+            return False
         except Exception as e:
-            _LOGGER.warning("pyenergenie test failed (this may be normal if hardware not connected): %s", e)
+            _LOGGER.warning("pyenergenie hardware test failed (this may be normal if hardware not connected): %s", e)
             # Don't fail setup for hardware test failures - allow software testing
+            _LOGGER.info("pyenergenie library is available, hardware test failed (continuing anyway)")
+            # Create an info notification about hardware
+            hass.components.persistent_notification.create(
+                message="Energenie integration loaded successfully, but hardware test failed. This is normal if your ENER314-RT board is not connected or powered. The integration will work when hardware is properly connected.",
+                title="Energenie: Hardware Test Warning",
+                notification_id="energenie_hardware_warning"
+            )
 
         # Setup device registry
         device_registry = dr.async_get(hass)

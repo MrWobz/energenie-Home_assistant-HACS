@@ -15,10 +15,10 @@ A comprehensive Home Assistant custom integration for controlling Energenie devi
 ## Supported Devices
 
 ### Smart Switches (Identical Functionality)
-- **MIHO024** - Smart Light Switch (White)
+- **MIHO024** - Smart Light Switch (Black Nickel)
 - **MIHO026** - Smart Light Switch (Brushed Steel)
-- **MIHO025** - Smart Light Switch (Black Nickel)  
-- **MIHO008** - Smart Light Switch (Alternative model)
+- **MIHO025** - Smart Light Switch (Chrome)  
+- **MIHO008** - Smart Light Switch (white)
 
 *Note: All these models are internally identical - only styling differs*
 
@@ -38,6 +38,33 @@ A comprehensive Home Assistant custom integration for controlling Energenie devi
 - **ENER314-RT board** properly connected
 - **Home Assistant** 2023.1.0 or later
 - **HACS** (recommended) or manual installation
+- **pyenergenie library** (installed automatically from GitHub)
+
+## Important: Required Libraries
+
+This integration requires two libraries that are installed automatically by Home Assistant:
+
+- **RPi.GPIO** - For GPIO access on Raspberry Pi
+- **pyenergenie** - For Energenie device control (installed from GitHub)
+
+### Automatic Installation (Default)
+Home Assistant automatically installs both libraries when you add the integration. **No manual commands required!**
+
+### If Installation Issues Occur
+The integration uses **persistent notifications** in the Home Assistant UI to guide you:
+
+1. **Setup**: Integration creates itself even if libraries are missing
+2. **Notifications**: Clear messages appear in UI if dependencies are missing  
+3. **Auto-retry**: Restart Home Assistant to complete automatic installation
+4. **Guidance**: Notifications provide specific next steps
+
+### User Experience
+- ✅ **Add integration** → Works immediately if libraries are available
+- ⚠️ **Libraries missing** → Notification appears with instructions
+- 🔄 **Restart Home Assistant** → Automatic installation completes
+- ✅ **Use devices** → Integration works normally
+
+**No SSH or command line access required!**
 
 ## Installation
 
@@ -150,6 +177,21 @@ Both entity types control devices identically - choose based on UI preference:
 
 ## Troubleshooting
 
+### Missing Dependencies
+**No SSH required!** The integration shows **persistent notifications** in Home Assistant UI:
+
+- **"Missing RPi.GPIO"** → Restart Home Assistant for automatic installation
+- **"Missing pyenergenie"** → Restart Home Assistant for automatic installation  
+- **"Hardware Test Warning"** → Check ENER314-RT board connection
+
+### Device Control Issues
+If device controls don't work:
+
+1. **Check Notifications** → Look for library or hardware error messages
+2. **Restart Home Assistant** → Complete automatic dependency installation
+3. **Check Hardware** → Ensure ENER314-RT board is connected and powered
+4. **Pair Devices** → Use the pairing services to learn device codes
+
 ### Device Not Responding
 1. Check device is in learning mode
 2. Increase pairing duration (20-30 seconds)
@@ -162,11 +204,10 @@ Both entity types control devices identically - choose based on UI preference:
 3. Ensure sensor is within range
 4. Test by triggering motion
 
-### Library Issues
-1. Check pyenergenie installation: `pip install git+https://github.com/whaleygeek/pyenergenie.git`
-2. Verify GPIO permissions
-3. Check ENER314-RT board connection
-4. Review Home Assistant logs
+### Hardware Setup Issues
+1. **ENER314-RT Connection** → Check GPIO pin connections
+2. **Power Supply** → Ensure adequate power to Raspberry Pi
+3. **Permissions** → Home Assistant should have GPIO access automatically
 
 ## Hardware Setup
 

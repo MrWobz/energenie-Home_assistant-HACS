@@ -94,6 +94,12 @@ class EnergenieSwitch(SwitchEntity):
         """Turn the switch on."""
         try:
             import energenie
+        except ImportError as e:
+            _LOGGER.error("pyenergenie library not available: %s", e)
+            _LOGGER.error("Cannot control device - pyenergenie library is required")
+            return
+            
+        try:
             energenie.init()
             energenie.switch_on(self._device_num)
             energenie.finished()
@@ -107,6 +113,12 @@ class EnergenieSwitch(SwitchEntity):
         """Turn the switch off."""
         try:
             import energenie
+        except ImportError as e:
+            _LOGGER.error("pyenergenie library not available: %s", e)
+            _LOGGER.error("Cannot control device - pyenergenie library is required")
+            return
+            
+        try:
             energenie.init()
             energenie.switch_off(self._device_num)
             energenie.finished()

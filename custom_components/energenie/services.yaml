@@ -63,3 +63,33 @@ learn_mode:
           min: 10
           max: 120
           mode: box
+
+add_device:
+  name: Add Device
+  description: Add a new device to an available slot and reload the integration
+  fields:
+    device_id:
+      name: Device ID
+      description: The device slot to use (1-16)
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 16
+          mode: box
+    device_name:
+      name: Device Name
+      description: Friendly name for the device
+      required: true
+      selector:
+        text:
+    device_type:
+      name: Device Type
+      description: Type of device (light or switch)
+      required: true
+      default: "light"
+      selector:
+        select:
+          options:
+            - "light"
+            - "switch"

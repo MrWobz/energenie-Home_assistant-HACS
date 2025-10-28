@@ -49,6 +49,7 @@ SERVICE_TURN_ON_ALL = "turn_on_all"
 SERVICE_TURN_OFF_ALL = "turn_off_all"
 SERVICE_PAIR_DEVICE = "pair_device"
 SERVICE_LEARN_MODE = "learn_mode"
+SERVICE_ADD_DEVICE = "add_device"
 
 # Motion sensor configuration
 CONF_MOTION_SENSOR_ENABLED = "motion_sensor_enabled"
