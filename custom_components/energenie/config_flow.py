@@ -33,14 +33,45 @@ class EnergenieConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            # Validate the input
-            await self.async_set_unique_id("energenie_ener314rt")
-            self._abort_if_unique_id_configured()
-            
-            return self.async_create_entry(
-                title="Energenie ENER314-RT",
-                data=user_input,
-            )
+            try:
+                # Validate the input
+                _LOGGER.info("Setting up Energenie integration with data: %s", user_input)
+                await self.async_set_unique_id("energenie_ener314rt")
+                self._abort_if_unique_id_configured()
+                
+                # Test GPIO availability if gpiozero is available
+                try:
+                    _LOGGER.info("Testing GPIO and Energenie module availability...")
+                    from gpiozero import Device, Energenie
+                    
+                    # Test if we can create an Energenie device (don't actually use it)
+                    try:
+                        test_device = Energenie(1)
+                        _LOGGER.info("Energenie device creation test successful")
+                        # Clean up the test device
+                        test_device.close()
+                    except Exception as device_error:
+                        _LOGGER.warning("Energenie device test failed: %s", device_error)
+                        # This might be normal if hardware isn't connected
+                        
+                    _LOGGER.info("GPIO and Energenie tests completed successfully")
+                    
+                except ImportError as e:
+                    _LOGGER.error("gpiozero or Energenie module not available: %s", e)
+                    errors["base"] = "gpio_not_available"
+                except Exception as e:
+                    _LOGGER.warning("GPIO/Energenie test failed: %s", e)
+                    errors["base"] = "gpio_test_failed"
+                
+                if not errors:
+                    return self.async_create_entry(
+                        title="Energenie ENER314-RT",
+                        data=user_input,
+                    )
+                    
+            except Exception as e:
+                _LOGGER.exception("Unexpected error during setup: %s", e)
+                errors["base"] = "unknown"
 
         # Define the configuration schema - only ask which devices to enable
         data_schema = vol.Schema({
@@ -62,6 +93,11 @@ class EnergenieConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=data_schema,
             errors=errors,
+            description_placeholders={
+                "gpio_not_available": "GPIO library (gpiozero) or Energenie module is not available. Make sure you're running on a Raspberry Pi with GPIO support and the ENER314-RT drivers installed.",
+                "gpio_test_failed": "GPIO or Energenie hardware test failed. Check that your Raspberry Pi GPIO is working and the ENER314-RT board is properly connected.",
+                "unknown": "An unexpected error occurred during setup. Check the logs for more details."
+            }
         )
 
     @staticmethod
