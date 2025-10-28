@@ -23,7 +23,7 @@ A Home Assistant custom integration for controlling Energenie ENER314-RT radio c
 1. Open HACS in Home Assistant
 2. Go to "Integrations"
 3. Click the three dots menu → "Custom repositories"
-4. Add this repository URL: `https://github.com/your-username/energenie-ener314rt-hass`
+4. Add this repository URL: `https://github.com/MrWobz/energenie-Home_assistant-HACS`
 5. Select category "Integration"
 6. Click "Add"
 7. Find "Energenie ENER314-RT" in HACS and install
