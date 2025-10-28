@@ -30,32 +30,31 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Energenie switches from a config entry."""
-    config = hass.data[DOMAIN][config_entry.entry_id]
-    
     switches = []
     
-    # Create switch entities for devices configured as switches, fans, or sockets
-    device_configs = [
-        (1, config.get(CONF_DEVICE_1_NAME), config.get(CONF_DEVICE_1_TYPE)),
-        (2, config.get(CONF_DEVICE_2_NAME), config.get(CONF_DEVICE_2_TYPE)),
-        (3, config.get(CONF_DEVICE_3_NAME), config.get(CONF_DEVICE_3_TYPE)),
-        (4, config.get(CONF_DEVICE_4_NAME), config.get(CONF_DEVICE_4_TYPE)),
-    ]
+    # Only create switches for enabled devices of switch type
+    if config_entry.data.get("device_1_enabled", True) and config_entry.data.get(CONF_DEVICE_1_TYPE) == DEVICE_TYPE_SWITCH:
+        switches.append(EnergenieSwitch(1, config_entry.data.get(CONF_DEVICE_1_NAME), config_entry.entry_id))
     
-    for device_num, device_name, device_type in device_configs:
-        if device_type in [DEVICE_TYPE_SWITCH, DEVICE_TYPE_FAN, DEVICE_TYPE_SOCKET]:
-            switches.append(EnergenieSwitch(device_num, device_name, device_type, config_entry.entry_id))
+    if config_entry.data.get("device_2_enabled", False) and config_entry.data.get(CONF_DEVICE_2_TYPE) == DEVICE_TYPE_SWITCH:
+        switches.append(EnergenieSwitch(2, config_entry.data.get(CONF_DEVICE_2_NAME), config_entry.entry_id))
     
-    async_add_entities(switches)
+    if config_entry.data.get("device_3_enabled", False) and config_entry.data.get(CONF_DEVICE_3_TYPE) == DEVICE_TYPE_SWITCH:
+        switches.append(EnergenieSwitch(3, config_entry.data.get(CONF_DEVICE_3_NAME), config_entry.entry_id))
+    
+    if config_entry.data.get("device_4_enabled", False) and config_entry.data.get(CONF_DEVICE_4_TYPE) == DEVICE_TYPE_SWITCH:
+        switches.append(EnergenieSwitch(4, config_entry.data.get(CONF_DEVICE_4_NAME), config_entry.entry_id))
+
+    if switches:
+        async_add_entities(switches, True)
 
 class EnergenieSwitch(SwitchEntity):
     """Representation of an Energenie Switch."""
 
-    def __init__(self, device_num: int, name: str, device_type: str, entry_id: str) -> None:
+    def __init__(self, device_num: int, name: str, entry_id: str) -> None:
         """Initialize the switch."""
         self._device_num = device_num
         self._name = name
-        self._device_type = device_type
         self._entry_id = entry_id
         self._is_on = False
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_switch_{device_num}"

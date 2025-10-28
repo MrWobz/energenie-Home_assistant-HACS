@@ -14,6 +14,12 @@ CONF_DEVICE_3_TYPE = "device_3_type"
 CONF_DEVICE_4_NAME = "device_4_name"
 CONF_DEVICE_4_TYPE = "device_4_type"
 
+# Device enabled configuration keys
+CONF_DEVICE_1_ENABLED = "device_1_enabled"
+CONF_DEVICE_2_ENABLED = "device_2_enabled"
+CONF_DEVICE_3_ENABLED = "device_3_enabled"
+CONF_DEVICE_4_ENABLED = "device_4_enabled"
+
 # Device types
 DEVICE_TYPE_LIGHT = "light"
 DEVICE_TYPE_SWITCH = "switch"

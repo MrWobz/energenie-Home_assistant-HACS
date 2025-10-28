@@ -28,23 +28,23 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Energenie lights from a config entry."""
-    config = hass.data[DOMAIN][config_entry.entry_id]
-    
     lights = []
     
-    # Create light entities for devices configured as lights
-    device_configs = [
-        (1, config.get(CONF_DEVICE_1_NAME), config.get(CONF_DEVICE_1_TYPE)),
-        (2, config.get(CONF_DEVICE_2_NAME), config.get(CONF_DEVICE_2_TYPE)),
-        (3, config.get(CONF_DEVICE_3_NAME), config.get(CONF_DEVICE_3_TYPE)),
-        (4, config.get(CONF_DEVICE_4_NAME), config.get(CONF_DEVICE_4_TYPE)),
-    ]
+    # Only create lights for enabled devices of light type
+    if config_entry.data.get("device_1_enabled", True) and config_entry.data.get(CONF_DEVICE_1_TYPE) == DEVICE_TYPE_LIGHT:
+        lights.append(EnergenieLight(1, config_entry.data.get(CONF_DEVICE_1_NAME), config_entry.entry_id))
     
-    for device_num, device_name, device_type in device_configs:
-        if device_type == DEVICE_TYPE_LIGHT:
-            lights.append(EnergenieLight(device_num, device_name, config_entry.entry_id))
+    if config_entry.data.get("device_2_enabled", False) and config_entry.data.get(CONF_DEVICE_2_TYPE) == DEVICE_TYPE_LIGHT:
+        lights.append(EnergenieLight(2, config_entry.data.get(CONF_DEVICE_2_NAME), config_entry.entry_id))
     
-    async_add_entities(lights)
+    if config_entry.data.get("device_3_enabled", False) and config_entry.data.get(CONF_DEVICE_3_TYPE) == DEVICE_TYPE_LIGHT:
+        lights.append(EnergenieLight(3, config_entry.data.get(CONF_DEVICE_3_NAME), config_entry.entry_id))
+    
+    if config_entry.data.get("device_4_enabled", False) and config_entry.data.get(CONF_DEVICE_4_TYPE) == DEVICE_TYPE_LIGHT:
+        lights.append(EnergenieLight(4, config_entry.data.get(CONF_DEVICE_4_NAME), config_entry.entry_id))
+
+    if lights:
+        async_add_entities(lights, True)
 
 class EnergenieLight(LightEntity):
     """Representation of an Energenie Light."""

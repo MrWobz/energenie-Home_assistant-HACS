@@ -42,16 +42,20 @@ class EnergenieConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data=user_input,
             )
 
-        # Define the configuration schema
+        # Define the configuration schema - only ask which devices to enable
         data_schema = vol.Schema({
-            vol.Required(CONF_DEVICE_1_NAME, default=DEFAULT_DEVICE_NAMES[1]): str,
-            vol.Required(CONF_DEVICE_1_TYPE, default=DEVICE_TYPE_LIGHT): vol.In(DEVICE_TYPES),
-            vol.Required(CONF_DEVICE_2_NAME, default=DEFAULT_DEVICE_NAMES[2]): str,
-            vol.Required(CONF_DEVICE_2_TYPE, default=DEVICE_TYPE_LIGHT): vol.In(DEVICE_TYPES),
-            vol.Required(CONF_DEVICE_3_NAME, default=DEFAULT_DEVICE_NAMES[3]): str,
-            vol.Required(CONF_DEVICE_3_TYPE, default=DEVICE_TYPE_LIGHT): vol.In(DEVICE_TYPES),
-            vol.Required(CONF_DEVICE_4_NAME, default=DEFAULT_DEVICE_NAMES[4]): str,
-            vol.Required(CONF_DEVICE_4_TYPE, default=DEVICE_TYPE_LIGHT): vol.In(DEVICE_TYPES),
+            vol.Optional("device_1_enabled", default=True): bool,
+            vol.Optional(CONF_DEVICE_1_NAME, default=DEFAULT_DEVICE_NAMES[1]): str,
+            vol.Optional(CONF_DEVICE_1_TYPE, default=DEVICE_TYPE_LIGHT): vol.In(DEVICE_TYPES),
+            vol.Optional("device_2_enabled", default=False): bool,
+            vol.Optional(CONF_DEVICE_2_NAME, default=DEFAULT_DEVICE_NAMES[2]): str,
+            vol.Optional(CONF_DEVICE_2_TYPE, default=DEVICE_TYPE_LIGHT): vol.In(DEVICE_TYPES),
+            vol.Optional("device_3_enabled", default=False): bool,
+            vol.Optional(CONF_DEVICE_3_NAME, default=DEFAULT_DEVICE_NAMES[3]): str,
+            vol.Optional(CONF_DEVICE_3_TYPE, default=DEVICE_TYPE_LIGHT): vol.In(DEVICE_TYPES),
+            vol.Optional("device_4_enabled", default=False): bool,
+            vol.Optional(CONF_DEVICE_4_NAME, default=DEFAULT_DEVICE_NAMES[4]): str,
+            vol.Optional(CONF_DEVICE_4_TYPE, default=DEVICE_TYPE_LIGHT): vol.In(DEVICE_TYPES),
         })
 
         return self.async_show_form(
